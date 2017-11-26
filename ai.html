@@ -1,0 +1,202 @@
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hot Dog or Not Hot Dog</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"  crossorigin="anonymous">
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.154.0.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+    crossorigin="anonymous"></script>
+
+</head>
+.
+<body>
+    <div class="container-fluid center-block" style="padding-left:30%;">
+  <div class="col-md-12 center-block">
+    <h1> Hot Dog or Not Hot Dog</h1>
+    <p> Adblock and pop-up block must be disabled for login to work. Refresh after each try for best results.</p>
+    <input type='file' id="imgInp" />
+    <button id="upload-button"  class="btn btn-primary" style="display:none" >Click to see if it's Hot Dog or Not Hot Dog</button>
+  </div>
+
+
+
+
+
+    <div id="results"></div>
+    <div id="fb-root"></div>
+    <div class="col-md-8 center-block"id="hotdog" style="color:green; font-size:30px;"></div>
+    <div id="image" ></div>
+    <div id="imagelocal" >
+
+    <img id="blah" src="#" alt="your image" width='500' height='600' />
+  </div>
+
+
+
+
+      </div>
+
+
+    <script>
+
+    function readURL(input) {
+
+    if (input.files && input.files[0]) {
+      var reader = new FileReader();
+
+      reader.onload = function(e) {
+        $('#blah').attr('src', e.target.result);
+      }
+
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  $("#imgInp").change(function() {
+    readURL(this);
+  });
+
+
+
+
+    </script>
+
+
+
+
+
+
+    <script type="text/javascript">
+        var appId = '128290261182934';
+        var roleArn = 'arn:aws:iam::771452637355:role/FacebookIDRole';
+        var bucketName = 'cognito-prac-saurav';
+        AWS.config.region = 'us-east-1';
+        var objKey ="";
+
+        var fbUserId;
+        var bucket = new AWS.S3({
+            params: {
+                Bucket: bucketName
+            }
+        });
+
+        var fileChooser = document.getElementById('imgInp');
+        var button = document.getElementById('upload-button');
+        var results = document.getElementById('results');
+
+        button.addEventListener('click', function () {
+            var file = fileChooser.files[0];
+            if (file) {
+
+          //Object key will be facebook-USERID#/FILE_NAME
+                 objKey = 'facebook-' + fbUserId + '/' + file.name;
+                var params = {
+                    Key: objKey,
+                    ContentType: file.type,
+                    Body: file,
+                    ACL: 'public-read'
+                };
+                //State local Image try
+
+
+
+
+                //End local Image try
+
+                bucket.putObject(params, function (err, data) {
+                    if (err) {
+                        results.innerHTML = 'ERROR: ' + err;
+                    } else {
+                      listObjs();
+                      urls="https://s3.amazonaws.com/cognito-prac-saurav/"+objKey;
+
+
+                      var xhr = new XMLHttpRequest();
+                        xhr.open('POST', 'https://ecjpl17yp9.execute-api.us-east-1.amazonaws.com/dev/compare-yourself');
+                        xhr.onreadystatechange = function (event) {
+                          console.log(event.target.response);
+
+
+
+
+
+                          hotdog.innerHTML= "<div class=\"alert alert-success\" role=\"alert\">"+event.target.response+"</div>";
+
+                        
+                        }
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.send(JSON.stringify({key: objKey}));
+
+                    }
+                });
+            } else {
+                results.innerHTML = 'Nothing to upload.';
+            }
+        }, false);
+
+        function listObjs() {
+            var prefix = 'facebook-' + fbUserId;
+            bucket.listObjects({
+                Prefix: prefix
+            }, function (err, data) {
+                if (err) {
+                    results.innerHTML = 'ERROR: ' + err;
+                } else {
+                    var objKeys = "";
+                    var urls ="";
+                    var oKey= "";
+                    data.Contents.forEach(function (obj) {
+                        objKeys += obj.Key + "<br>";
+
+
+
+                    });
+
+
+
+                }
+            });
+        }
+        /*!
+         * Login to your application using Facebook.
+         * Uses the Facebook SDK for JavaScript available here:
+         * https://developers.facebook.com/docs/javascript/quickstart/
+         */
+
+        window.fbAsyncInit = function () {
+           FB.init({
+                appId: appId
+            });
+
+            FB.login(function (response) {
+                bucket.config.credentials = new AWS.WebIdentityCredentials({
+                    ProviderId: 'graph.facebook.com',
+                    RoleArn: roleArn,
+                    WebIdentityToken: response.authResponse.accessToken
+               });
+               fbUserId = response.authResponse.userID;
+                button.style.display = 'block';
+            })
+        };
+
+<!--         // Load the Facebook SDK asynchronously
+        (function (d, s, id) {
+            var js, fjs = d.getElementsByTagName(s)[0];
+            if (d.getElementById(id)) {
+               return;
+           }
+           js = d.createElement(s);
+            js.id = id;
+            js.src = "https://connect.facebook.net/en_US/all.js";
+        fjs.parentNode.insertBefore(js, fjs);
+        }(document, 'script', 'facebook-jssdk'));
+    </script>
+
+
+</body>
+</html>
